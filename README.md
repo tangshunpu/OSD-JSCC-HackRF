@@ -16,6 +16,23 @@ The released compact sender and image decoder are the Tiny variant; the JSCC
 receiver and U-Net are derived from the published [OSD-JSCC-P
 weights](https://github.com/tangshunpu/OSD-JSCC/tree/main/osd_jscc_p).
 
+## System deployment
+
+![HackRF transmitter and receiver hardware](assets/system_deployment.png)
+
+The illustrated prototype uses a HackRF One at each end. This repository
+provides the Jetson AGX Orin transmitter and RTX workstation receiver shown
+above. [Download the original figure (PDF)](assets/system_deployment.pdf).
+
+## Transmission pipeline and OFDM frame
+
+![Transmission pipeline and OFDM packet structure](assets/ofdm_frame_and_pipeline.png)
+
+For a 512×768 image at CR 96, the four transmitted layers occupy eight
+packets. Each packet contains short and long training fields (STF and LTF), a
+coded header with CRC, and 32 payload OFDM symbols with 48 data and 4 pilot
+subcarriers each. [Download the original figure (PDF)](assets/ofdm_frame_and_pipeline.pdf).
+
 ## Hardware and software
 
 - Jetson AGX Orin with a USB camera, a HackRF One, JetPack and TensorRT.
