@@ -36,7 +36,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from osd_jscc_p.models import MultirateOSDV3  # noqa: E402
+from osd_jscc_p.models import OSDJSCCP  # noqa: E402
 from graphs import (  # noqa: E402
     ReceiverJSCC, Sender, UNetStep, VAEDecode, layer_channel_groups,
     merge_unet_lora, routing_constants,
@@ -145,7 +145,7 @@ def main() -> None:
     if metadata.get("format") != "osd_jscc_p_weights_v1":
         raise ValueError("Expected an OSD-JSCC-P safetensors checkpoint")
     config = json.loads(metadata["model_config"])
-    model = MultirateOSDV3.from_config(config, sd_model_id=args.sd_model, torch_dtype=torch.float32)
+    model = OSDJSCCP.from_config(config, sd_model_id=args.sd_model, torch_dtype=torch.float32)
     result = model.load_state_dict(load_file(args.checkpoint), strict=False)
     missing = sorted(model.persistent_keys().intersection(result.missing_keys))
     if missing or result.unexpected_keys:

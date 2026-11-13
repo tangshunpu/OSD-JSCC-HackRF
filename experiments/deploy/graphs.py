@@ -1,6 +1,6 @@
 """Transmitter and receiver sub-graphs of OSD-JSCC-P for ONNX/TensorRT export.
 
-The graphs re-express ``MultirateOSDV3`` (experiments/mulirate_succ) with the
+The graphs re-express ``OSDJSCCP`` with the
 host-side glue folded in, so each TensorRT engine starts and ends at a buffer
 the application already has:
 
