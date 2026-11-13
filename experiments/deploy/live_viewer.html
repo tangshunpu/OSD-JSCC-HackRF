@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OSD-JSCC Live</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f4f3f0;
+    --surface-1: #fcfcfb;
+    --surface-2: #efeee9;
+    --border: #dcdbd5;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #7a7974;
+    --grid: #e6e5e0;
+    --accent: #2a78d6;
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6;
+    --good: #0ca30c; --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #111110; --surface-1: #1a1a19; --surface-2: #242422; --border: #34342f;
+      --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8e8d86; --grid: #2c2c29;
+      --accent: #3987e5;
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #111110; --surface-1: #1a1a19; --surface-2: #242422; --border: #34342f;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8e8d86; --grid: #2c2c29;
+    --accent: #3987e5;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--page); color: var(--text-primary);
+         font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+  main { max-width: 1440px; margin: 0 auto; padding: 18px 16px 28px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 20px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  h1 span { color: var(--text-secondary); font-weight: 450; }
+  .status { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 13px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-muted); }
+  .status.on .dot { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 22%, transparent); }
+  .head-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .rec { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-secondary); }
+  .rec button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--border); border-radius: 8px;
+                background: var(--surface-1); color: var(--text-primary); font: inherit; font-size: 13px; padding: 5px 11px;
+                cursor: pointer; font-variant-numeric: tabular-nums; }
+  .rec button:disabled { opacity: .6; cursor: default; }
+  .rec .led { width: 9px; height: 9px; border-radius: 50%; background: var(--critical); }
+  .rec.on button { border-color: var(--critical); }
+  .rec.on .led { animation: blink 1s steps(2, start) infinite; }
+  @keyframes blink { to { visibility: hidden; } }
+  .rec a { color: var(--accent); text-decoration: none; }
+  .rec a:hover { text-decoration: underline; }
+  .capture .rec, .capture .tip { display: none !important; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; }
+  .videos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .pane { padding: 10px; }
+  .pane .label { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--text-secondary); margin: 0 2px 8px; }
+  .pane .label b { color: var(--text-primary); font-weight: 600; }
+  .frame { position: relative; aspect-ratio: 3 / 2; background: var(--surface-2); border-radius: 8px; overflow: hidden; }
+  .frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .frame .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-muted); font-size: 13px; }
+  .badge { position: absolute; left: 10px; top: 10px; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;
+           background: rgba(0,0,0,.55); color: #fff; font-variant-numeric: tabular-nums; }
+  .controls { display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: center; padding: 14px 16px; margin-top: 14px; }
+  .control { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+  .control > span { color: var(--text-secondary); font-size: 13px; }
+  input[type=range] { width: 220px; accent-color: var(--accent); }
+  .snr-value { font-weight: 650; font-variant-numeric: tabular-nums; min-width: 52px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: transparent; color: var(--text-primary); padding: 6px 11px; font: inherit; font-size: 13px;
+                cursor: pointer; font-variant-numeric: tabular-nums; }
+  .seg button + button { border-left: 1px solid var(--border); }
+  .seg button.on { background: var(--accent); color: #fff; }
+  .meta { color: var(--text-muted); font-size: 12.5px; margin-left: auto; }
+  .rf-text { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .rf-text b { font-weight: 650; }
+  .tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-top: 14px; }
+  .tile { padding: 12px 14px; }
+  .tile .k { font-size: 12.5px; color: var(--text-secondary); }
+  .tile .v { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin-top: 2px; }
+  .tile .v small { font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-left: 3px; letter-spacing: 0; }
+  .tile .sub { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .charts { display: grid; grid-template-columns: 2fr 3fr; gap: 14px; margin-top: 14px; }
+  .chart { padding: 14px 16px; }
+  .chart h2 { font-size: 14px; font-weight: 600; margin: 0 0 2px; }
+  .chart .note { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+  .stack { display: flex; gap: 2px; height: 28px; margin: 14px 0 12px; }
+  .stack div { height: 100%; min-width: 0; transition: flex-grow .25s ease; }
+  .stack div:first-child { border-radius: 4px 0 0 4px; }
+  .stack div:last-child { border-radius: 0 4px 4px 0; }
+  .legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 14px; font-size: 13px; }
+  .legend div { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .legend b { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; margin-left: auto; }
+  .facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 18px 0 0; padding-top: 12px;
+           border-top: 1px solid var(--border); font-size: 12.5px; }
+  .facts dt { color: var(--text-muted); }
+  .facts dd { margin: 0; color: var(--text-secondary); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .plot { position: relative; }
+  svg { display: block; width: 100%; height: 210px; overflow: visible; }
+  svg text { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .tip { position: absolute; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+         padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); min-width: 170px; display: none; }
+  .tip .row { display: flex; gap: 10px; justify-content: space-between; color: var(--text-secondary); }
+  .tip .row b { color: var(--text-primary); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .tip .row i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+  footer { margin-top: 12px; color: var(--text-muted); font-size: 12px; }
+  @media (max-width: 1000px) {
+    .tiles { grid-template-columns: repeat(3, 1fr); }
+    .charts { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .videos { grid-template-columns: 1fr; }
+    .tiles { grid-template-columns: repeat(2, 1fr); }
+    .meta { margin-left: 0; }
+    .control > span { width: 100%; }
+    input[type=range] { flex: 1; width: auto; }
+    .seg button { padding: 6px 8px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1><span id="model">OSD-JSCC-P (tiny)</span> <span id="subtitle">· live wireless video</span></h1>
+    <div class="head-right">
+      <div class="rec" id="rec"><span id="rec-note"></span>
+        <button id="rec-btn" type="button"><span class="led"></span><span id="rec-text">Record dashboard</span></button></div>
+      <div class="status" id="status"><span class="dot"></span><span id="status-text">Waiting for sender</span></div>
+    </div>
+  </header>
+
+  <section class="videos">
+    <div class="card pane">
+      <div class="label"><span><b>Transmitter</b> · MacBook camera</span><span id="tx-label">reference copy (JPEG side channel)</span></div>
+      <div class="frame"><div class="empty">no camera frames yet</div><img id="tx" alt="Camera frame at the transmitter"></div>
+    </div>
+    <div class="card pane">
+      <div class="label"><span><b>Receiver</b> · RTX PRO 6000</span><span id="rx-label">after the AWGN channel</span></div>
+      <div class="frame"><div class="empty">no decoded frames yet</div><img id="rx" alt="Decoded frame at the receiver"><div class="badge" id="badge">–</div></div>
+    </div>
+  </section>
+
+  <section class="card controls">
+    <label class="control" id="snr-control"><span>Channel SNR</span>
+      <input type="range" id="snr" min="0" max="20" step="1" value="10">
+      <span class="snr-value" id="snr-value">10 dB</span></label>
+    <div class="control" id="rf-control" hidden><span>Channel</span><span class="rf-text" id="rf-text">–</span></div>
+    <div class="control" id="model-control" hidden><span>Model</span><div class="seg" id="models"></div></div>
+    <div class="control" id="rate-control"><span>Compression ratio</span><div class="seg" id="rates"></div></div>
+    <div class="control" title="Blend static areas with the previous frame (receiver side, display only)">
+      <span>Temporal smoothing</span>
+      <div class="seg" id="smooth"><button type="button" data-v="1">On</button><button type="button" data-v="0">Off</button></div></div>
+    <div class="meta" id="link-meta">–</div>
+  </section>
+
+  <section class="tiles">
+    <div class="card tile"><div class="k">Received frame rate</div><div class="v" id="t-fps">–<small>fps</small></div><div class="sub" id="t-cam">camera –</div></div>
+    <div class="card tile"><div class="k">End-to-end latency</div><div class="v" id="t-e2e">–<small>ms</small></div><div class="sub" id="t-p95">median, last 2 s</div></div>
+    <div class="card tile"><div class="k">Encoding · MacBook</div><div class="v" id="t-enc">–<small>ms</small></div><div class="sub">Core ML, GPU</div></div>
+    <div class="card tile"><div class="k" id="t-net-k">Network · Wi-Fi</div><div class="v" id="t-net">–<small>ms</small></div><div class="sub" id="t-rtt">clock sync –</div></div>
+    <div class="card tile"><div class="k">Decoding · RTX</div><div class="v" id="t-dec">–<small>ms</small></div><div class="sub" id="t-dec-sub">TensorRT FP16</div></div>
+    <div class="card tile"><div class="k" id="t-kb-k">Payload per frame</div><div class="v" id="t-kb">–<small>KB</small></div><div class="sub" id="t-mbps">–</div></div>
+  </section>
+
+  <section class="charts">
+    <div class="card chart">
+      <h2>Where the time goes</h2>
+      <div class="note">Median per stage over the last 2 s, camera frame to displayed JPEG</div>
+      <div class="stack" id="stack"></div>
+      <div class="legend" id="legend"></div>
+      <dl class="facts">
+        <dt>Link</dt><dd id="f-link">–</dd>
+        <dt>Source</dt><dd id="f-source">–</dd>
+        <dt>Frames logged</dt><dd id="f-frames">–</dd>
+        <dt>Log folder</dt><dd id="f-dir">–</dd>
+      </dl>
+    </div>
+    <div class="card chart">
+      <h2>End-to-end latency per frame</h2>
+      <div class="note">Last 150 frames · hover for the stage breakdown</div>
+      <div class="plot" id="plot"><svg id="svg"></svg><div class="tip" id="tip"></div></div>
+    </div>
+  </section>
+  <footer id="footer">Every frame is logged by the receiver (frames.csv + summary.json per connection).</footer>
+</main>
+
+<script>
+const COLORS = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6", "--s7"];
+const $ = (id) => document.getElementById(id);
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+let state = { rate: null, dragging: false, history: [], groups: [], hover: null, link: null };
+
+function post(control) {
+  fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(control) });
+}
+
+function buildRates(rates) {
+  const box = $("rates");
+  if (box.childElementCount) return;
+  for (const r of rates) {
+    const b = document.createElement("button");
+    b.textContent = r; b.dataset.rate = r;
+    b.onclick = () => { post({ rate: r }); setRate(r); };
+    box.appendChild(b);
+  }
+}
+const MODEL_NAMES = { tiny: "OSD-JSCC-P (tiny)", osd: "OSD-JSCC-P", swinjscc: "SwinJSCC", video: "Tiny video (GOP 4)" };
+const FIXED_RATE = { swinjscc: "SwinJSCC (WITT C16) is trained for CR 96 only",
+                     video: "The video model is trained for CR 96 only" };
+function buildModels(models) {
+  const box = $("models");
+  $("model-control").hidden = !models || models.length < 2;
+  if (!models || box.dataset.models === models.join(",")) return;
+  box.dataset.models = models.join(",");
+  box.replaceChildren();
+  for (const m of models) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = MODEL_NAMES[m] || m; b.dataset.model = m;
+    b.onclick = () => { post({ model: m }); setModel(m); };
+    box.appendChild(b);
+  }
+}
+function setModel(m) {
+  if (!m) return;
+  state.model = m;
+  for (const b of $("models").children) b.classList.toggle("on", b.dataset.model === m);
+  $("model").textContent = MODEL_NAMES[m] || m;
+  // SwinJSCC (WITT C16) and the video model have one fixed rate, CR 96: the rate buttons do not apply
+  const fixed = FIXED_RATE[m];
+  $("rate-control").style.opacity = fixed ? 0.4 : 1;
+  $("rate-control").style.pointerEvents = fixed ? "none" : "";
+  $("rate-control").title = fixed || "";
+}
+function setRate(r) {
+  state.rate = r;
+  for (const b of $("rates").children) b.classList.toggle("on", +b.dataset.rate === r);
+}
+
+for (const b of $("smooth").children) {
+  b.onclick = () => { post({ smoothing: b.dataset.v === "1" }); setSmooth(b.dataset.v === "1"); };
+}
+function setSmooth(on) {
+  for (const b of $("smooth").children) b.classList.toggle("on", (b.dataset.v === "1") === on);
+}
+
+const snr = $("snr");
+snr.addEventListener("input", () => { state.dragging = true; $("snr-value").textContent = snr.value + " dB"; });
+snr.addEventListener("change", () => { state.dragging = false; post({ snr_db: +snr.value }); });
+
+function streams() {  // (re)attach MJPEG streams; browsers drop them when the server restarts
+  for (const name of ["tx", "rx"]) {
+    const img = $(name);
+    img.onload = () => { img.previousElementSibling.style.display = "none"; };
+    img.onerror = () => setTimeout(() => { img.src = `/${name}.mjpg?t=${Date.now()}`; }, 1000);
+    img.src = `/${name}.mjpg?t=${Date.now()}`;
+  }
+}
+
+function fmt(v, d = 1) { return (v === undefined || v === null || isNaN(v)) ? "–" : v.toFixed(d); }
+
+function setLink(s) {
+  if (state.link === s.link) return;
+  state.link = s.link;
+  const rf = s.link === "rf";
+  $("snr-control").hidden = rf;
+  $("rf-control").hidden = !rf;
+  $("subtitle").textContent = rf ? "· live video over the air" : "· live wireless video";
+  $("tx-label").textContent = rf ? "reference copy (JPEG over Wi-Fi, display only)" : "reference copy (JPEG side channel)";
+  $("t-net-k").textContent = rf ? `Radio link · ${fmt(s.rf_mhz / 1000, 2)} GHz` : "Network · Wi-Fi";
+  $("t-kb-k").textContent = rf ? "Measured SNR" : "Payload per frame";
+  $("f-link").textContent = rf
+    ? `HackRF → HackRF at ${fmt(s.rf_mhz / 1000, 2)} GHz, 10 MHz OFDM; symbols over the air only, TCP for metadata and SNR feedback`
+    : "Wi-Fi TCP, simulated AWGN at the receiver";
+  $("stack").innerHTML = ""; $("legend").innerHTML = "";
+}
+
+if (new URLSearchParams(location.search).has("capture")) document.body.classList.add("capture");
+let recStatus = "idle";
+$("rec-btn").onclick = () => {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const theme = document.documentElement.dataset.theme || (dark ? "dark" : "light");
+  fetch("/record", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: recStatus === "idle" ? "start" : "stop", theme }) });
+  $("rec-btn").disabled = true;
+};
+function renderRecording(r) {
+  if (!r) return;
+  recStatus = r.status;
+  const on = r.status === "recording";
+  $("rec").classList.toggle("on", on);
+  $("rec-btn").disabled = r.status === "starting" || r.status === "finishing";
+  const mmss = (t) => `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+  $("rec-text").textContent = { idle: "Record dashboard", starting: "Starting…", recording: `Stop · REC ${mmss(r.seconds)}`,
+                               finishing: "Saving…" }[r.status] ?? "Record dashboard";
+  const note = $("rec-note");
+  if (r.status === "idle" && r.last) {
+    note.innerHTML = r.last.error ? `Recording failed: ${r.last.error}`
+      : `Saved ${r.last.name} · ${r.last.mb} MB · <a href="${r.last.url}" download>Download</a>`;
+  } else note.textContent = "";
+}
+
+function render(s) {
+  renderRecording(s.recording);
+  setSmooth(!!s.smoothing);
+  const smoothNote = s.smoothing ? " · smoothed" : "";
+  buildRates(s.rates || []);
+  setLink(s);
+  const rf = s.link === "rf";
+  $("status").classList.toggle("on", !!s.connected);
+  $("status-text").textContent = s.connected
+    ? `Streaming from ${s.hello?.sender ?? "sender"}${s.live ? "" : " · waiting for frames"}`
+    : "Waiting for sender";
+  if (s.hello) {
+    buildModels(s.hello.models || [s.hello.model]);
+    if (!s.live) setModel(s.desired?.model || s.hello.model);
+    const coded = `${s.hello.height}×${s.hello.width}`;
+    const fit = s.hello.fit === "pad"
+      ? `fit ${s.hello.valid_height}×${s.hello.valid_width}, pad to ${coded}` : `crop → ${coded}`;
+    $("f-source").textContent = s.hello.camera_width
+      ? `camera ${s.hello.camera_width}×${s.hello.camera_height} → ${fit}${s.hello.mirror ? " (mirrored)" : ""}`
+      : `${s.hello.playback} playback @ ${fmt(s.hello.playback_fps, 0)} fps → ${fit}`;
+  }
+  if (s.session_dir) { $("f-dir").textContent = s.session_dir; $("f-frames").textContent = s.frames_logged.toLocaleString(); }
+  if (!s.live) return;
+  setRate(s.rate);
+  setModel(s.model);
+  const g = Object.fromEntries(s.groups.map((name, i) => [name, s.group_values[i]]));
+  $("t-fps").innerHTML = `${fmt(s.fps)}<small>fps</small>`;
+  $("t-e2e").innerHTML = `${fmt(s.e2e_median)}<small>ms</small>`;
+  $("t-p95").textContent = `median · p95 ${fmt(s.e2e_p95)} ms`;
+  $("t-enc").innerHTML = `${fmt(s.stages.encode)}<small>ms</small>`;
+  $("t-dec").innerHTML = `${fmt(s.stages.decode)}<small>ms</small>`;
+  if (rf) {
+    const loss = s.total_packets ? 100 * (1 - s.packets / s.total_packets) : NaN;
+    $("badge").textContent = `${MODEL_NAMES[s.model] || "OSD-JSCC-P"} · CR ${s.rate} · ${fmt(s.snr_db)} dB measured · ${fmt(s.fps)} fps · ${fmt(s.e2e_median, 0)} ms${smoothNote}`;
+    $("rx-label").textContent = `after the radio link · SNR ${fmt(s.snr_db)} dB${smoothNote}`;
+    $("rf-text").innerHTML = `measured SNR <b>${fmt(s.snr_db)} dB</b> → encoder ${fmt(s.encoder_snr_db)} dB, `
+      + `decoder ${fmt(s.decoder_snr_db)} dB (0–20 dB model range) · TX VGA ${s.tx_gain} dB${s.hello?.tx_amp ? " + RF amp" : ""} fixed`;
+    $("t-cam").textContent = `camera ${fmt(s.camera_fps)} fps · ${s.lost} frames lost`;
+    $("t-net").innerHTML = `${fmt(g["Radio link"])}<small>ms</small>`;
+    $("t-rtt").textContent = `TX USB + air ${fmt(s.air_ms)} ms + RX buffer`;
+    $("t-dec-sub").textContent = `demod ${fmt(s.stages.demod)} ms · TensorRT FP16`;
+    $("t-kb").innerHTML = `${fmt(s.snr_db)}<small>dB</small>`;
+    $("t-mbps").textContent = `packet loss ${fmt(loss, 2)} % · ${s.packets_per_frame} packets/frame`;
+    $("link-meta").textContent = `${s.channels} symbol layers · ${s.channel_uses.toLocaleString()} channel uses · ${s.packets_per_frame} OFDM packets, ${fmt(s.air_ms, 2)} ms on air`;
+  } else {
+    if (!state.dragging) { snr.value = s.snr_db; $("snr-value").textContent = `${s.snr_db} dB`; }
+    $("badge").textContent = `CR ${s.rate} · ${s.snr_db} dB · ${fmt(s.fps)} fps · ${fmt(s.e2e_median, 0)} ms${smoothNote}`;
+    $("rx-label").textContent = `after AWGN at ${s.snr_db} dB${smoothNote}`;
+    $("t-cam").textContent = `camera ${fmt(s.camera_fps)} fps · ${s.drops} dropped at RX`;
+    $("t-net").innerHTML = `${fmt(s.stages.network)}<small>ms</small>`;
+    $("t-rtt").textContent = `clock-sync RTT ${fmt(s.sync_rtt_ms, 2)} ms`;
+    $("t-dec-sub").textContent = "TensorRT FP16";
+    $("t-kb").innerHTML = `${fmt(s.payload_bytes / 1024)}<small>KB</small>`;
+    $("t-mbps").textContent = `${fmt(s.mbps, 2)} Mbit/s · fp16 symbols`;
+    $("link-meta").textContent = `${s.channels} symbol layers · ${s.channel_uses.toLocaleString()} channel uses per 512×768 frame`;
+  }
+
+  const stack = $("stack"), legend = $("legend");
+  if (!stack.childElementCount) {
+    s.groups.forEach((label, i) => {
+      const color = COLORS[i % COLORS.length];
+      const d = document.createElement("div"); d.style.background = `var(${color})`; d.title = label; stack.appendChild(d);
+      const l = document.createElement("div"); l.innerHTML = `<i style="background:var(${color})"></i>${label}<b></b>`; legend.appendChild(l);
+    });
+  }
+  s.group_values.forEach((v, i) => {
+    stack.children[i].style.flexGrow = Math.max(v, 0.001);
+    legend.children[i].querySelector("b").textContent = `${fmt(v)} ms`;
+  });
+  state.groups = s.groups;
+  state.history = s.history;
+  drawPlot();
+}
+
+function drawPlot() {
+  const svg = $("svg"), h = state.history, n = state.groups.length;
+  const W = svg.clientWidth, H = svg.clientHeight, L = 34, R = 6, T = 8, B = 20;
+  if (!h.length || !W) { svg.innerHTML = ""; return; }
+  const e2e = h.map((r) => r[n + 1]);
+  const top = niceMax(Math.max(...e2e) * 1.1);
+  const x = (i) => L + (W - L - R) * (h.length === 1 ? 0.5 : i / (h.length - 1));
+  const y = (v) => T + (H - T - B) * (1 - Math.min(v, top) / top);
+  let out = "";
+  for (let k = 0; k <= 4; k++) {
+    const v = (top * k) / 4, yy = y(v);
+    out += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="${css("--grid")}" stroke-width="1"/>`;
+    out += `<text x="${L - 6}" y="${yy + 4}" text-anchor="end">${Math.round(v)}</text>`;
+  }
+  out += `<text x="${L}" y="${H - 4}">frame ${h[0][0]}</text><text x="${W - R}" y="${H - 4}" text-anchor="end">${h[h.length - 1][0]} · ms</text>`;
+  out += `<polyline fill="none" stroke="${css("--s1")}" stroke-width="2" stroke-linejoin="round" points="${e2e.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ")}"/>`;
+  if (state.hover !== null) {
+    const i = Math.max(0, Math.min(h.length - 1, Math.round(((state.hover - L) / (W - L - R)) * (h.length - 1))));
+    out += `<line x1="${x(i)}" x2="${x(i)}" y1="${T}" y2="${H - B}" stroke="${css("--text-muted")}" stroke-width="1"/>`;
+    out += `<circle cx="${x(i)}" cy="${y(e2e[i])}" r="4.5" fill="${css("--s1")}" stroke="${css("--surface-1")}" stroke-width="2"/>`;
+    showTip(i, x(i), W);
+  }
+  svg.innerHTML = out;
+}
+
+function showTip(i, px, W) {
+  const r = state.history[i], tip = $("tip"), n = state.groups.length;
+  let html = `<div class="row"><span>Frame ${r[0]}</span><b>${fmt(r[n + 1])} ms</b></div>`;
+  state.groups.forEach((label, k) => {
+    html += `<div class="row"><span><i style="background:var(${COLORS[k % COLORS.length]})"></i>${label}</span><b>${fmt(r[k + 1])} ms</b></div>`;
+  });
+  tip.innerHTML = html; tip.style.display = "block";
+  tip.style.left = `${px + 14 + 190 > W ? px - 14 - tip.offsetWidth : px + 14}px`;
+  tip.style.top = "6px";
+}
+
+function niceMax(v) {
+  const steps = [20, 40, 60, 80, 100, 120, 160, 200, 300, 400, 600, 800, 1000, 2000];
+  return steps.find((s) => s >= v) ?? Math.ceil(v / 1000) * 1000;
+}
+
+$("plot").addEventListener("mousemove", (e) => { state.hover = e.clientX - $("svg").getBoundingClientRect().left; drawPlot(); });
+$("plot").addEventListener("mouseleave", () => { state.hover = null; $("tip").style.display = "none"; drawPlot(); });
+window.addEventListener("resize", drawPlot);
+
+function connect() {
+  const es = new EventSource("/events");
+  es.onmessage = (e) => render(JSON.parse(e.data));
+  es.onerror = () => { es.close(); $("status").classList.remove("on"); $("status-text").textContent = "Receiver offline · retrying"; setTimeout(() => { connect(); streams(); }, 2000); };
+}
+streams();
+connect();
+</script>
+<script>
+// Fit each frame box to the picture's own aspect ratio (3:2 at 512x768, 16:9 at 1080p). MJPEG <img>
+// streams do not fire "load" per frame in every browser, so check the natural size periodically.
+setInterval(() => {
+  for (const id of ["tx", "rx"]) {
+    const img = document.getElementById(id);
+    if (img && img.naturalWidth && img.naturalHeight)
+      img.parentElement.style.aspectRatio = img.naturalWidth + " / " + img.naturalHeight;
+  }
+}, 1000);
+</script>
+</body>
+</html>

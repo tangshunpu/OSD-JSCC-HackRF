@@ -1,0 +1,106 @@
+{
+  "checkpoint": "checkpoints/osd_jscc_p_awgn.safetensors",
+  "step": "1000",
+  "model_config": {
+    "compression_ratio": 48,
+    "channel": "awgn",
+    "jscc_width": 256,
+    "lora_rank": 32,
+    "semantic_tokens": 4,
+    "snr_embedding_dim": 256,
+    "high_snr_threshold": 10.0,
+    "snr_modulation": "adagn",
+    "architecture": "mulirate_succ_v2",
+    "layers": [
+      4,
+      4,
+      8,
+      16,
+      16,
+      16
+    ],
+    "layer_unit": "half_channel_checkerboard",
+    "rates": [
+      768,
+      384,
+      192,
+      96,
+      64,
+      48
+    ],
+    "c_max": 32,
+    "power_norm": "layer",
+    "rate_thresholds": {
+      "768": 10.0,
+      "384": 10.0,
+      "192": 10.0,
+      "96": 10.0,
+      "64": 10.0,
+      "48": 10.0
+    },
+    "latent": "deterministic_mean",
+    "rate_conditioning": "receiver_only"
+  },
+  "c_max": 32,
+  "rates": [
+    768,
+    384,
+    192,
+    96,
+    64,
+    48
+  ],
+  "layer_channels": [
+    [
+      0,
+      2
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      4,
+      8
+    ],
+    [
+      8,
+      16
+    ],
+    [
+      16,
+      24
+    ],
+    [
+      24,
+      32
+    ]
+  ],
+  "sent_channels": {
+    "768": 2,
+    "384": 4,
+    "192": 8,
+    "96": 16,
+    "64": 24,
+    "48": 32
+  },
+  "vae_scaling_factor": 0.18215,
+  "context_tokens": 5,
+  "context_dim": 1024,
+  "symbol_downsample": 16,
+  "opset": 17,
+  "rate_thresholds": {
+    "768": 10.0,
+    "384": 10.0,
+    "192": 10.0,
+    "96": 10.0,
+    "64": 10.0,
+    "48": 10.0
+  },
+  "high_timestep": 249,
+  "low_timestep": 499,
+  "sigmas": {
+    "249": 0.6932054162025452,
+    "499": 1.6128870248794556
+  }
+}
